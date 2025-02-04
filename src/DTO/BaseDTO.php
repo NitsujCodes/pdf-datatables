@@ -1,6 +1,6 @@
 <?php
 
-namespace NitsujCodes\PDFDataTable\dto;
+namespace NitsujCodes\PDFDataTable\DTO;
 
 use Exception;
 

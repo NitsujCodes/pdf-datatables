@@ -1,6 +1,6 @@
 <?php
 
-namespace NitsujCodes\PDFDataTable\dto\enums;
+namespace NitsujCodes\PDFDataTable\DTO\Enums;
 
 enum ColumnType
 {

@@ -1,9 +1,9 @@
 <?php
 
-namespace NitsujCodes\PDFDataTable\services;
+namespace NitsujCodes\PDFDataTable\Services;
 
-use NitsujCodes\PDFDataTable\dto\Column;
-use NitsujCodes\PDFDataTable\dto\ColumnConfig;
+use NitsujCodes\PDFDataTable\DTO\Column;
+use NitsujCodes\PDFDataTable\DTO\ColumnConfig;
 use NitsujCodes\PDFDataTable\PDFDataTables;
 
 use ReflectionException;

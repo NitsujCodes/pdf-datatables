@@ -1,8 +1,8 @@
 <?php
 
-namespace NitsujCodes\PDFDataTable\dto;
+namespace NitsujCodes\PDFDataTable\DTO;
 
-use NitsujCodes\PDFDataTable\dto\interfaces\IDTO;
+use NitsujCodes\PDFDataTable\DTO\Interfaces\IDTO;
 
 class Row extends BaseDTO implements IDTO
 {

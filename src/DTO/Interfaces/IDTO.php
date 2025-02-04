@@ -1,6 +1,6 @@
 <?php
 
-namespace NitsujCodes\PDFDataTable\dto\interfaces;
+namespace NitsujCodes\PDFDataTable\DTO\Interfaces;
 
 interface IDTO
 {

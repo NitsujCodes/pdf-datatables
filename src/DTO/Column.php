@@ -1,9 +1,9 @@
 <?php
 
-namespace NitsujCodes\PDFDataTable\dto;
+namespace NitsujCodes\PDFDataTable\DTO;
 
-use NitsujCodes\PDFDataTable\dto\enums\ColumnType;
-use NitsujCodes\PDFDataTable\dto\interfaces\IDTO;
+use NitsujCodes\PDFDataTable\DTO\Enums\ColumnType;
+use NitsujCodes\PDFDataTable\DTO\Interfaces\IDTO;
 
 class Column extends BaseDTO implements IDTO
 {

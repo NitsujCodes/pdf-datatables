@@ -1,9 +1,9 @@
 <?php
 
-namespace NitsujCodes\PDFDataTable\services;
+namespace NitsujCodes\PDFDataTable\Services;
 
-use NitsujCodes\PDFDataTable\dto\attributes\DefaultValue;
-use NitsujCodes\PDFDataTable\dto\Nullable;
+use NitsujCodes\PDFDataTable\DTO\Attributes\DefaultValue;
+use NitsujCodes\PDFDataTable\DTO\Nullable;
 use ReflectionClass;
 use Exception;
 use ReflectionProperty;

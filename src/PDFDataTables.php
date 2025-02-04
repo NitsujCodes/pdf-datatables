@@ -2,11 +2,11 @@
 
 namespace NitsujCodes\PDFDataTable;
 
-use NitsujCodes\PDFDataTable\dto\Column;
-use NitsujCodes\PDFDataTable\dto\Row;
-use NitsujCodes\PDFDataTable\dto\Table;
-use NitsujCodes\PDFDataTable\dto\TableConfig;
-use NitsujCodes\PDFDataTable\services\HydrationService;
+use NitsujCodes\PDFDataTable\DTO\Column;
+use NitsujCodes\PDFDataTable\DTO\Row;
+use NitsujCodes\PDFDataTable\DTO\Table;
+use NitsujCodes\PDFDataTable\DTO\TableConfig;
+use NitsujCodes\PDFDataTable\Services\HydrationService;
 use TCPDF;
 use Exception;
 

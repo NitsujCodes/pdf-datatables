@@ -1,6 +1,6 @@
 <?php
 
-namespace NitsujCodes\PDFDataTable\dto\attributes;
+namespace NitsujCodes\PDFDataTable\DTO\Attributes;
 
 #[\Attribute(\Attribute::TARGET_PROPERTY)]
 class DefaultValue
