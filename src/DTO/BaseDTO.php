@@ -3,29 +3,20 @@
 namespace NitsujCodes\PDFDataTable\DTO;
 
 use Exception;
+use NitsujCodes\PDFDataTable\Services\HydrationService;
 
 class BaseDTO
 {
-    /**
-     * @throws Exception
-     */
-    public function __construct(array $data = [])
-    {
-        foreach ($data as $key => $value) {
-            if (!property_exists($this, $key)) {
-                throw new \Exception("Property $key does not exist");
-            }
+    public function __construct(){}
 
-            $this->$key = $value;
-        }
-    }
+    // TODO: Find a way to add a more strict type safety without forcing strict_type=1
 
     /**
      * @throws Exception
      */
     public static function fromArray(array $data): static
     {
-        return new static($data);
+        return HydrationService::hydrate(static::class, $data);
     }
 
     public function toArray(): array

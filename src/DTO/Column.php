@@ -7,7 +7,11 @@ use NitsujCodes\PDFDataTable\DTO\Interfaces\IDTO;
 
 class Column extends BaseDTO implements IDTO
 {
-    public readonly ColumnType $type;
-    public readonly string $content;
-    public readonly ColumnConfig $config;
+    public function __construct(
+        public readonly ColumnType $type,
+        public readonly string $content,
+        public readonly ColumnConfig $config,
+    ) {
+        parent::__construct();
+    }
 }

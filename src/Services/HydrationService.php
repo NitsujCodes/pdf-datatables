@@ -2,11 +2,9 @@
 
 namespace NitsujCodes\PDFDataTable\Services;
 
-use NitsujCodes\PDFDataTable\DTO\Attributes\DefaultValue;
-use NitsujCodes\PDFDataTable\DTO\Nullable;
 use ReflectionClass;
 use Exception;
-use ReflectionProperty;
+use ReflectionParameter;
 use ReflectionException;
 
 class HydrationService
@@ -16,7 +14,7 @@ class HydrationService
     /**
      * @throws ReflectionException|Exception
      */
-    public function hydrate(string $className, array $data): object {
+    public static function hydrate(string $className, array $data): object {
         if (!class_exists($className))
             throw new Exception("Class $className does not exist");
         $reflection = new ReflectionClass($className);
@@ -24,48 +22,28 @@ class HydrationService
         if (!$reflection->isInstantiable())
             throw new Exception("Class $className is not instantiable");
 
-        $properties = $reflection->getProperties();
+        $constructorArguments = $reflection->getConstructor()?->getParameters() ?? [];
         $processedData = [];
 
-        foreach ($properties as $property) {
-            $propertyName = $property->getName();
+        foreach ($constructorArguments as $argument) {
+            $argName = $argument->getName();
 
-            $nullableAttribute = $this->getPropertyAttribute($property, Nullable::class);
-            $defaultValueAttribute = $this->getPropertyAttribute($property, DefaultValue::class);
+            if (!array_key_exists($argName, $data) && !$argument->isOptional())
+                throw new Exception("Missing required parameter '$argName'");
 
-            $isNullable = $nullableAttribute?->isNullable ?? true;
-            $hasDefaultValue = is_null($defaultValueAttribute);
+            if (is_null($data[$argName]) && !$argument->allowsNull())
+                throw new Exception("Parameter '$argName' is not nullable but NULL was given");
 
-            $processedData[$propertyName] = $this->preparePropertyValue(
-                $property,
-                $data[$propertyName] ?? null,
-                $isNullable,
-                $hasDefaultValue,
-                $defaultValueAttribute
-            );
+            $processedData[] = !array_key_exists($argName, $data) ?
+                $argument->getDefaultValue() : $data[$argName];
         }
 
-        return $reflection->newInstanceArgs([$processedData]);
+        return $reflection->newInstanceArgs($processedData);
     }
 
-    public function preparePropertyValue(
-        ReflectionProperty $property,
-        mixed $value,
-        bool $isNullable,
-        bool $hasDefaultValue,
-        ?DefaultValue $defaultValue
-    ): mixed {
-        if (is_null($value) && !$isNullable && !$hasDefaultValue)
-            throw new \InvalidArgumentException(
-                "Property '{$property->getName()}' is not nullable and has no default value but NULL was given"
-            );
-
-        return $isNullable ? $value : $defaultValue?->value;
-    }
-
-    public function getPropertyAttribute(ReflectionProperty $property, string $attributeClass): ?object
+    public function getParameterAttribute(ReflectionParameter $parameter, string $attributeClass): ?object
     {
-        $attributes = $property->getAttributes($attributeClass);
+        $attributes = $parameter->getAttributes($attributeClass);
         return $attributes[0]->newInstance() ?? null;
     }
 }
