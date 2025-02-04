@@ -1,6 +1,5 @@
 {
     "name": "nitsujcodes/pdf-datatables",
-    "version": "1.0.0",
     "description": "A library for easy DataTable creation in PDFs using TCPDF.",
     "type": "library",
     "require": {
