@@ -1,0 +1,38 @@
+{
+    "name": "nitsujcodes/pdf-datatable",
+    "description": "A library for easy DataTable creation in PDFs using TCPDF.",
+    "type": "library",
+    "require": {
+        "php": ">=8.1",
+        "symfony/serializer": "^6.4",
+        "tecnickcom/tcpdf": "^6.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "NitsujCodes\\PDFDataTable\\": "src/"
+        }
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "NitsujCodes\\PDFDataTable\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit"
+    },
+    "minimum-stability": "stable",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Justin Smith",
+            "email": "justin_jt_smith@live.co.uk"
+        }
+    ],
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    }
+}
