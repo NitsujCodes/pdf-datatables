@@ -6,13 +6,19 @@ use NitsujCodes\PDFDataTable\DTO\Column;
 use NitsujCodes\PDFDataTable\DTO\Row;
 use NitsujCodes\PDFDataTable\DTO\Table;
 use NitsujCodes\PDFDataTable\DTO\TableConfig;
+use NitsujCodes\PDFDataTable\Services\ColumnService;
 use NitsujCodes\PDFDataTable\Services\HydrationService;
+use NitsujCodes\PDFDataTable\Services\RowService;
+use NitsujCodes\PDFDataTable\Services\TableService;
 use TCPDF;
 use Exception;
 
 class PDFDataTables
 {
     public static HydrationService $hydrationService;
+    public static TableService $tableService;
+    public static RowService $rowService;
+    public static ColumnService $columnService;
 
     private TCPDF $pdf;
     private TableConfig $tableConfig;
@@ -88,11 +94,7 @@ class PDFDataTables
         if (array_key_exists($tableUnique, $this->tables))
             throw new Exception("Table with unique name $tableUnique already exists");
 
-        $this->tables[$tableUnique] = new Table([
-            'config' => $tableConfig,
-            'columns' => $headers,
-            'rows' => $rows,
-        ]);
+
     }
 
     public function usingTable(string $tableUnique): self

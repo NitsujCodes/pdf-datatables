@@ -12,9 +12,27 @@ class HydrationService
     public function __construct() {}
 
     /**
+     * @param string $className
+     * @param array $data
+     * @return object[]
+     * @throws ReflectionException
+     */
+    public function hydrateFromArray(string $className, array $data): array
+    {
+        $collection = [];
+        foreach ($data as $item) {
+            $collection[] = self::hydrate($className, $item);
+        }
+        return $collection;
+    }
+
+    /**
+     * @param string $className
+     * @param array $data
+     * @return object
      * @throws ReflectionException|Exception
      */
-    public static function hydrate(string $className, array $data): object {
+    public function hydrate(string $className, array $data): object {
         if (!class_exists($className))
             throw new Exception("Class $className does not exist");
         $reflection = new ReflectionClass($className);
@@ -41,6 +59,11 @@ class HydrationService
         return $reflection->newInstanceArgs($processedData);
     }
 
+    /**
+     * @param ReflectionParameter $parameter
+     * @param string $attributeClass
+     * @return object|null
+     */
     public function getParameterAttribute(ReflectionParameter $parameter, string $attributeClass): ?object
     {
         $attributes = $parameter->getAttributes($attributeClass);
