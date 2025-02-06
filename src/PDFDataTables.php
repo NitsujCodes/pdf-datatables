@@ -3,7 +3,10 @@
 namespace NitsujCodes\PDFDataTable;
 
 use NitsujCodes\PDFDataTable\DTO\Column;
+use NitsujCodes\PDFDataTable\DTO\ColumnConfig;
+use NitsujCodes\PDFDataTable\DTO\Enums\ColumnType;
 use NitsujCodes\PDFDataTable\DTO\Row;
+use NitsujCodes\PDFDataTable\DTO\RowConfig;
 use NitsujCodes\PDFDataTable\DTO\Table;
 use NitsujCodes\PDFDataTable\DTO\TableConfig;
 use NitsujCodes\PDFDataTable\Services\ColumnService;
@@ -15,10 +18,12 @@ use Exception;
 
 class PDFDataTables
 {
-    public static HydrationService $hydrationService;
-    public static TableService $tableService;
-    public static RowService $rowService;
-    public static ColumnService $columnService;
+    public readonly HydrationService $hydrationService;
+    public readonly TableService $tableService;
+    public readonly RowService $rowService;
+    public readonly ColumnService $columnService;
+
+    private static ?PDFDataTables $instance = null;
 
     private TCPDF $pdf;
     private TableConfig $tableConfig;
@@ -35,7 +40,10 @@ class PDFDataTables
     public function __construct(?TCPDF &$pdf = null)
     {
         // Services
-        self::$hydrationService = new HydrationService();
+        $this->hydrationService = new HydrationService();
+        $this->tableService = new TableService();
+        $this->rowService = new RowService();
+        $this->columnService = new ColumnService();
 
         if (!is_null($pdf)) {
             $this->pdf = &$pdf;
@@ -46,6 +54,41 @@ class PDFDataTables
         $this->tableConfig = $this->getDefaultTableConfig();
         $this->tableCount = 0;
         $this->tables = [];
+    }
+
+    public function attachTPCDF(TCPDF &$pdf): void
+    {
+        $this->pdf = &$pdf;
+    }
+
+    public function initTCPDF(
+        $orientation = 'P',
+        $unit = 'mm',
+        $format = 'A4',
+        $unicode = true,
+        $encoding = 'UTF-8',
+        $diskcache = false,
+        $pdfa = false
+    ): void
+    {
+        $this->pdf = new TCPDF(
+            $orientation,
+            $unit,
+            $format,
+            $unicode,
+            $encoding,
+            $diskcache,
+            $pdfa,
+        );
+    }
+
+    public static function getInstance() : PDFDataTables
+    {
+        if (is_null(self::$instance)) {
+            self::$instance = new PDFDataTables();
+        }
+
+        return self::$instance;
     }
 
     /**
@@ -66,9 +109,6 @@ class PDFDataTables
         if (!array_key_exists($tableUnique, $this->tables))
             throw new Exception("Table with unique name $tableUnique does not exist");
 
-        if (is_array($tableConfig))
-            $tableConfig = TableConfig::fromArray($tableConfig);
-
         if (!$tableConfig instanceof TableConfig)
             throw new Exception("Table config must be an instance of TableConfig or an array");
 
@@ -84,17 +124,35 @@ class PDFDataTables
      * Add a table to the PDF
      *
      * @param string $tableUnique
-     * @param TableConfig|array $tableConfig
-     * @param array $headers Column headers
+     * @param TableConfig $tableConfig
+     * @param array $rowHeader
      * @param array $rows Table data (array of arrays)
      * @throws Exception
      */
-    public function addTable(string $tableUnique, TableConfig|array $tableConfig, array $headers, array $rows): void
+    public function addTable(string $tableUnique, TableConfig $tableConfig, array $rowHeader = [], array $rows = []): void
     {
         if (array_key_exists($tableUnique, $this->tables))
             throw new Exception("Table with unique name $tableUnique already exists");
 
+        $defaultRowConfig = new RowConfig();
+        $defaultColumnConfig = new ColumnConfig();
 
+        $headerRow = $this->rowService->create(
+            config: $defaultRowConfig,
+            rowColumnsData: $rowHeader,
+            columnType: ColumnType::HeaderColumn,
+            defaultColumnConfig: $defaultColumnConfig,
+        );
+
+        $this->tables[$tableUnique] = new Table(
+            $tableUnique,
+            config: $tableConfig,
+            defaultRowConfig: $defaultRowConfig,
+            defaultColumnConfig: $defaultColumnConfig,
+            dataRows: $rows,
+            headerRow: $headerRow,
+        );
+        $this->tableCount++;
     }
 
     public function usingTable(string $tableUnique): self

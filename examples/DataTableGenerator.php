@@ -7,6 +7,7 @@ require __DIR__ . '/../vendor/autoload.php';
 
 use NitsujCodes\PDFDataTable\DTO\ColumnConfig;
 use NitsujCodes\PDFDataTable\DTO\RowConfig;
+use NitsujCodes\PDFDataTable\DTO\TableConfig;
 use NitsujCodes\PDFDataTable\DTO\TestObject;
 use NitsujCodes\PDFDataTable\PDFDataTables;
 use NitsujCodes\PDFDataTable\Services\HydrationService;
@@ -14,9 +15,29 @@ use NitsujCodes\PDFDataTable\Services\RowService;
 
 // Initialize the table generator
 $pdf = new TCPDF();
+$pdfDataTables = PDFDataTables::getInstance();
+$pdfDataTables->attachTPCDF($pdf);
+
+$table = $pdfDataTables->tableService->create('testTable', new TableConfig());
+$pdfDataTables->tableService->setRowHeader('testTable', [
+    'name' => [
+        'content' => 'Name',
+    ],
+    'age' => [
+        'content' => 'Age',
+    ],
+    'email' => [
+        'content' => 'Email',
+    ],
+]);
+
+echo "<pre>";
+print_r($table);
+die();
+
 // Define table headers and rows
 $headers = ['Name', 'Age', 'Email'];
-$headerRow = PDFDataTables::$rowService->create(
+$headerRow = PDFDataTables::getInstance()->rowService->create(
     config: new RowConfig(),
     rowColumnsData: $headers,
     defaultColumnConfig: new ColumnConfig()
@@ -47,7 +68,7 @@ $rows = [
 ];
 
 foreach ($rows as $row) {
-    $processedRows[] = PDFDataTables::$rowService->create(
+    $processedRows[] = PDFDataTables::getInstance()->rowService->create(
         config: new RowConfig(),
         rowColumnsData: $row,
         defaultColumnConfig: new ColumnConfig()
@@ -55,6 +76,8 @@ foreach ($rows as $row) {
 }
 
 echo "<pre>";
+print_r($headerRow);
+echo "<br /><br />";
 print_r($processedRows);
 die();
 

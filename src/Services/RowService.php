@@ -15,24 +15,28 @@ class RowService
     /**
      * @param RowConfig $config
      * @param array $rowColumnsData
-     * @param ColumnConfig $defaultColumnConfig
+     * @param ColumnType|null $columnType
+     * @param ColumnConfig|null $defaultColumnConfig
      * @return Row
      */
-    public function create(RowConfig $config, array $rowColumnsData, ColumnConfig $defaultColumnConfig): Row
+    public function create(RowConfig $config, array $rowColumnsData, ?ColumnType $columnType = null, ?ColumnConfig $defaultColumnConfig = null): Row
     {
         $columns = [];
-        foreach ($rowColumnsData as $reference => $content) {
+        $columnCount = 0;
+        foreach ($rowColumnsData as $reference => $columnData) {
             $columns[] = ColumnService::create(
                 reference: $reference,
-                config: $columnData['config'] ?? new ColumnConfig(),
+                config: $columnData['config'] ?? $defaultColumnConfig ?? new ColumnConfig(),
                 content: $columnData['content'] ?? '',
-                columnType: $columnData['type'] ?? ColumnType::RowColumn,
+                columnType: $columnType ?? ColumnType::RowColumn,
             );
+            $columnCount++;
         }
 
         return new Row(
             config: $config,
-            defaultColumnConfig: $defaultColumnConfig,
+            defaultColumnConfig: $defaultColumnConfig ?? new ColumnConfig(),
+            columnCount: $columnCount,
             columns: $columns,
         );
     }
