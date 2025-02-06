@@ -8,17 +8,14 @@ require __DIR__ . '/../vendor/autoload.php';
 use NitsujCodes\PDFDataTable\DTO\ColumnConfig;
 use NitsujCodes\PDFDataTable\DTO\RowConfig;
 use NitsujCodes\PDFDataTable\DTO\TableConfig;
-use NitsujCodes\PDFDataTable\DTO\TestObject;
 use NitsujCodes\PDFDataTable\PDFDataTables;
-use NitsujCodes\PDFDataTable\Services\HydrationService;
-use NitsujCodes\PDFDataTable\Services\RowService;
 
 // Initialize the table generator
 $pdf = new TCPDF();
 $pdfDataTables = PDFDataTables::getInstance();
 $pdfDataTables->attachTPCDF($pdf);
+die();
 
-$table = $pdfDataTables->tableService->create('testTable', new TableConfig());
 $pdfDataTables->tableService->setRowHeader('testTable', [
     'name' => [
         'content' => 'Name',
@@ -30,18 +27,6 @@ $pdfDataTables->tableService->setRowHeader('testTable', [
         'content' => 'Email',
     ],
 ]);
-
-echo "<pre>";
-print_r($table);
-die();
-
-// Define table headers and rows
-$headers = ['Name', 'Age', 'Email'];
-$headerRow = PDFDataTables::getInstance()->rowService->create(
-    config: new RowConfig(),
-    rowColumnsData: $headers,
-    defaultColumnConfig: new ColumnConfig()
-);
 
 $processedRows = [];
 $rows = [
@@ -66,20 +51,6 @@ $rows = [
     ['name' => 'Steve', 'age' => 41, 'email' => 'steve@example.com', 'phone' => '789-123-6540'],
     ['name' => 'Tina', 'age' => 23, 'email' => 'tina@example.com', 'phone' => '987-321-4560'],
 ];
-
-foreach ($rows as $row) {
-    $processedRows[] = PDFDataTables::getInstance()->rowService->create(
-        config: new RowConfig(),
-        rowColumnsData: $row,
-        defaultColumnConfig: new ColumnConfig()
-    );
-}
-
-echo "<pre>";
-print_r($headerRow);
-echo "<br /><br />";
-print_r($processedRows);
-die();
 
 // Add the table to the PDF
 $pdf->addTable($headers, $rows);

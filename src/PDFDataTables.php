@@ -27,12 +27,22 @@ class PDFDataTables
 
     private TCPDF $pdf;
     private TableConfig $tableConfig;
+
+    private array $tableConfigs = [];
+    private array $tableRowConfigs = [];
+    private array $tableRowCellConfigs = [];
+
     private array $tables;
     private int $tableCount;
+    private array $tableRows;
+    private array $tablesRowCount;
+    private array $tableHeaderRows;
+    private array $tableRowCells;
+    private array $tableRowsCellCount;
 
-    private ?Table $currentTable;
-    private ?Row $currentRow;
-    private ?Column $currentColumn;
+    private ?string $currentTableName;
+    private ?string $currentRowId;
+    private ?string $currentCellId;
 
     /**
      * @throws Exception
@@ -50,6 +60,10 @@ class PDFDataTables
         } else {
             $this->pdf = new TCPDF();
         }
+
+        $this->currentTableName = null;
+        $this->currentRowId = null;
+        $this->currentCellId = null;
 
         $this->tableConfig = $this->getDefaultTableConfig();
         $this->tableCount = 0;
@@ -82,7 +96,7 @@ class PDFDataTables
         );
     }
 
-    public static function getInstance() : PDFDataTables
+    public static function getInstance(): PDFDataTables
     {
         if (is_null(self::$instance)) {
             self::$instance = new PDFDataTables();
@@ -115,44 +129,117 @@ class PDFDataTables
         $this->updateTableProp($tableUnique, 'config', $tableConfig);
     }
 
-    private function getTableConfig(): TableConfig
+    /**
+     * @throws Exception
+     */
+    public function &getCurrentTable(): Table
     {
-        return $this->tableConfig;
+        if (!isset($this->currentTableName))
+            throw new Exception("No table has been selected");
+
+        return $this->tables[$this->currentTableName];
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function &getCurrentRow(): Row
+    {
+        $this->getCurrentTable();
+        if (!isset($this->currentRowId))
+            throw new Exception("No row has been selected");
+
+        if (!isset($this->tableRows[$this->currentTableName][$this->currentRowId]))
+            throw new Exception(
+                "Row with id $this->currentRowId does not exist in table $this->currentTableName"
+            );
+
+        return $this->tableRows[$this->currentTableName][$this->currentRowId];
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function &getCurrentCell(): Column
+    {
+        $this->getCurrentRow();
+        if (!isset($this->currentCellId))
+            throw new Exception("No column has been selected");
+
+        if (!isset($this->tableRowCells[$this->currentTableName][$this->currentRowId][$this->currentCellId]))
+            throw new Exception(
+                "Column with id $this->currentCellId does not exist in row $this->currentRowId in table $this->currentTableName"
+            );
+        return $this->tableRowCells[$this->currentTableName][$this->currentRowId][$this->currentCellId];
     }
 
     /**
      * Add a table to the PDF
      *
-     * @param string $tableUnique
-     * @param TableConfig $tableConfig
-     * @param array $rowHeader
-     * @param array $rows Table data (array of arrays)
+     * @param string $tableName
+     * @param float $maxWidth
+     * @param float $maxHeight
+     * @param int $cellsPerRow
      * @throws Exception
      */
-    public function addTable(string $tableUnique, TableConfig $tableConfig, array $rowHeader = [], array $rows = []): void
+    public function addTable(string $tableName, float $maxWidth, float $maxHeight, int $cellsPerRow, bool $selectNewTable = true): self
     {
-        if (array_key_exists($tableUnique, $this->tables))
-            throw new Exception("Table with unique name $tableUnique already exists");
+        if (array_key_exists($tableName, $this->tables))
+            throw new Exception("Table with unique name $tableName already exists");
 
-        $defaultRowConfig = new RowConfig();
-        $defaultColumnConfig = new ColumnConfig();
-
-        $headerRow = $this->rowService->create(
-            config: $defaultRowConfig,
-            rowColumnsData: $rowHeader,
-            columnType: ColumnType::HeaderColumn,
-            defaultColumnConfig: $defaultColumnConfig,
-        );
-
-        $this->tables[$tableUnique] = new Table(
-            $tableUnique,
-            config: $tableConfig,
-            defaultRowConfig: $defaultRowConfig,
-            defaultColumnConfig: $defaultColumnConfig,
-            dataRows: $rows,
-            headerRow: $headerRow,
+        $this->tables[$tableName] = $this->tableService->create(
+            name: $tableName,
+            maxWidth: $maxWidth,
+            maxHeight: $maxHeight,
+            maxCellsPerRow: $cellsPerRow,
         );
         $this->tableCount++;
+        $this->tablesRowCount[$tableName] = 0;
+
+        return $selectNewTable ? $this->usingTable($tableName) : $this;
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function &getTableConfig(): TableConfig
+    {
+        $table = $this->getCurrentTable();
+        return $this->tableConfig[$table->name];
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function &getRowConfig(): RowConfig
+    {
+        $row = $this->getCurrentRow();
+        return $this->tableRowConfigs[$this->currentTableName][$row->getObjectId()];
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function &getCellConfig(): ColumnConfig
+    {
+        $cell = $this->getCurrentCell();
+        return $this->tableRowCellConfigs[$this->currentTableName][$cell->getObjectId()];
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function addRow(array $cells, ?RowConfig $config = null, bool $moveToNewRow = true): self
+    {
+        $table = $this->getCurrentTable();
+        $newRow = $this->rowService->create();
+        $this->tableRows[$table->name][$newRow->getObjectId()] = $newRow;
+        $this->tableRowCells[$table->name][$newRow->getObjectId()] = [];
+        $this->tablesRowCount[$table->name]++;
+
+        $this->tableRowConfigs[$table->name][$newRow->getObjectId()] = $config;
+
+        return $moveToNewRow ? $this->inRow($newRow->getObjectId()) : $this;
     }
 
     public function usingTable(string $tableUnique): self
@@ -160,45 +247,45 @@ class PDFDataTables
         if (!array_key_exists($tableUnique, $this->tables))
             throw new Exception("Table with unique name $tableUnique does not exist");
         $this->resetCurrentRow();
-        $this->currentTable =& $this->tables[$tableUnique];
+        $this->currentTableName = $tableUnique;
         return $this;
     }
 
     public function inRow(int $rowIndex): self
     {
-        if (is_null($this->currentTable))
+        if (is_null($this->currentTableName))
             throw new Exception("No table has been selected");
-        if (!isset($this->currentTable->rows[$rowIndex]))
+        if (!isset($this->currentTableName->rows[$rowIndex]))
             throw new Exception("Row $rowIndex does not exist");
         $this->resetCurrentColumn();
-        $this->currentRow =& $this->currentTable->rows[$rowIndex];
+        $this->currentRowId =& $this->currentTableName->rows[$rowIndex];
         return $this;
     }
 
     public function inColumn(int $columnIndex): self
     {
-        if (is_null($this->currentTable))
+        if (is_null($this->currentTableName))
             throw new Exception("No table has been selected");
-        if (!isset($this->currentTable->columns[$columnIndex]))
+        if (!isset($this->currentTableName->columns[$columnIndex]))
             throw new Exception("Column $columnIndex does not exist");
-        $this->currentColumn =& $this->currentTable->columns[$columnIndex];
+        $this->currentCellId =& $this->currentTableName->columns[$columnIndex];
         return $this;
     }
 
     private function resetCurrentColumn(): void
     {
-        $this->currentColumn = null;
+        $this->currentCellId = null;
     }
 
     public function resetCurrentRow(): void
     {
-        $this->currentRow = null;
+        $this->currentRowId = null;
         $this->resetCurrentColumn();
     }
 
     public function resetCurrentTable(): void
     {
-        $this->currentTable = null;
+        $this->currentTableName = null;
         $this->resetCurrentRow();
     }
 
@@ -224,7 +311,7 @@ class PDFDataTables
 
     /**
      * Save the PDF to the specified file
-     * 
+     *
      * @param string $filename
      */
     public function save(string $filename): void
