@@ -9,6 +9,7 @@ class Row extends BaseDTO implements IDTO
 {
     public function __construct(
         public readonly ColumnType $defaultColumnType = ColumnType::RowColumn,
+        public readonly bool $isVisible = true,
     )
     {
         parent::__construct();

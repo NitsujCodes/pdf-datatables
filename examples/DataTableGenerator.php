@@ -1,13 +1,10 @@
 <?php
 
-ini_set('memory_limit', '4G');
+ini_set('memory_limit', '1G');
 ini_set('max_execution_time', 300);
 
 require __DIR__ . '/../vendor/autoload.php';
 
-use NitsujCodes\PDFDataTable\DTO\ColumnConfig;
-use NitsujCodes\PDFDataTable\DTO\RowConfig;
-use NitsujCodes\PDFDataTable\DTO\TableConfig;
 use NitsujCodes\PDFDataTable\PDFDataTables;
 
 // Initialize the table generator

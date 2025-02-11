@@ -11,6 +11,7 @@ class Table extends BaseDTO implements IDTO
         public readonly int    $cellsPerRow,
         public readonly int    $maxWidth,
         public readonly int    $maxHeight,
+        public readonly bool $hasHeaderRow = true,
     )
     {
         parent::__construct();

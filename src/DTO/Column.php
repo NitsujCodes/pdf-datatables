@@ -11,6 +11,7 @@ class Column extends BaseDTO implements IDTO
         public readonly int|string $reference,
 
         // Optionals
+        public readonly bool $isVisible = true,
         public readonly string     $content = '',
         public readonly ColumnType $type = ColumnType::RowColumn,
     )

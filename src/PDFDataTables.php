@@ -13,6 +13,8 @@ use NitsujCodes\PDFDataTable\Services\ColumnService;
 use NitsujCodes\PDFDataTable\Services\HydrationService;
 use NitsujCodes\PDFDataTable\Services\RowService;
 use NitsujCodes\PDFDataTable\Services\TableService;
+use SplDoublyLinkedList;
+use SplFixedArray;
 use TCPDF;
 use Exception;
 
@@ -44,6 +46,12 @@ class PDFDataTables
     private ?string $currentRowId;
     private ?string $currentCellId;
 
+    private array $configCache;
+    private array $cellIndexMap;
+    private SplDoublyLinkedList $renderQueue;
+    private ?SplFixedArray $currentRowCells;
+
+
     /**
      * @throws Exception
      */
@@ -68,6 +76,11 @@ class PDFDataTables
         $this->tableConfig = $this->getDefaultTableConfig();
         $this->tableCount = 0;
         $this->tables = [];
+
+        $this->renderQueue = new SplDoublyLinkedList();
+        $this->configCache = [];
+        $this->cellIndexMap = [];
+        $this->currentRowCells = null;
     }
 
     public function attachTPCDF(TCPDF &$pdf): void
@@ -226,12 +239,21 @@ class PDFDataTables
         return $this->tableRowCellConfigs[$this->currentTableName][$cell->getObjectId()];
     }
 
+    public function hasRowHeader(string $tableName): bool
+    {
+        return !empty($this->tableHeaderRows[$tableName]);
+    }
+
     /**
      * @throws Exception
      */
     public function addRow(array $cells, ?RowConfig $config = null, bool $moveToNewRow = true): self
     {
         $table = $this->getCurrentTable();
+
+        if ($table->hasHeaderRow && !$this->hasRowHeader($table->name))
+            throw new Exception("Table $table->name does not have a row header. This is required for adding rows.");
+
         $newRow = $this->rowService->create();
         $this->tableRows[$table->name][$newRow->getObjectId()] = $newRow;
         $this->tableRowCells[$table->name][$newRow->getObjectId()] = [];
@@ -242,7 +264,231 @@ class PDFDataTables
         return $moveToNewRow ? $this->inRow($newRow->getObjectId()) : $this;
     }
 
-    public function usingTable(string $tableUnique): self
+    /**
+     * @param string $content
+     * @param string|null $reference
+     * @param ColumnConfig|null $config
+     * @param bool $moveToNewCell
+     * @return $this
+     * @throws Exception
+     */
+    public function addCell(string $content, ?string $reference = null, ?ColumnConfig $config = null, bool $moveToNewCell = true): self
+    {
+        $row = $this->getCurrentRow();
+        $table = $this->getCurrentTable();
+        $tableName = $this->currentTableName;
+        $rowId = $row->getObjectId();
+
+        // Check cell count
+        $currentCells = $this->tableRowCells[$tableName][$rowId] ?? [];
+        $currentCellCount = count($currentCells);
+
+        if ($currentCellCount >= $table->cellsPerRow) {
+            throw new Exception("Cannot add more cells. Maximum cells per row ({$table->cellsPerRow}) reached.");
+        }
+
+        // Create new cell using Column DTO
+        $newCell = new Column(
+            reference: $reference ?? $rowId,
+            isVisible: true,
+            content: $content,
+            type: $row->defaultColumnType
+        );
+
+        $cellId = $newCell->getObjectId();
+
+        // Store the cell
+        $this->tableRowCells[$tableName][$rowId][$cellId] = $newCell;
+        $this->tableRowCellConfigs[$tableName][$rowId][$cellId] = $config;
+        $this->tableRowsCellCount[$tableName][$rowId] = $currentCellCount + 1;
+
+        // Index the cell
+        $this->indexCell($tableName, $rowId, $cellId);
+
+        return $moveToNewCell ? $this->inCell($cellId) : $this;
+    }
+
+    /**
+     * @param array $cellsData
+     * @return $this
+     * @throws Exception
+     */
+    public function batchAddCells(array $cellsData): self
+    {
+        $tableName = $this->currentTableName;
+        $row = $this->getCurrentRow();
+        $rowId = $row->getObjectId();
+
+        // Pre-allocate arrays
+        $newCells = [];
+        $newConfigs = [];
+
+        foreach ($cellsData as $cellData) {
+            $newCell = new Column(
+                reference: $cellData['reference'] ?? $rowId,
+                isVisible: $cellData['isVisible'] ?? true,
+                content: $cellData['content'],
+                type: $row->defaultColumnType
+            );
+
+            $cellId = $newCell->getObjectId();
+            $newCells[$cellId] = $newCell;
+            $newConfigs[$cellId] = $cellData['config'] ?? null;
+        }
+
+        // Validate total cell count
+        $currentCount = $this->tableRowsCellCount[$tableName][$rowId] ?? 0;
+        $newCount = $currentCount + count($newCells);
+        $table = $this->getCurrentTable();
+
+        if ($newCount > $table->cellsPerRow) {
+            throw new Exception("Adding these cells would exceed maximum cells per row ({$table->cellsPerRow})");
+        }
+
+        // Bulk insert
+        foreach ($newCells as $cellId => $cell) {
+            $this->tableRowCells[$tableName][$rowId][$cellId] = $cell;
+            $this->tableRowCellConfigs[$tableName][$rowId][$cellId] = $newConfigs[$cellId];
+            $this->indexCell($tableName, $rowId, $cellId);
+        }
+
+        $this->tableRowsCellCount[$tableName][$rowId] = $newCount;
+
+        return $this;
+    }
+
+    /**
+     * @param string $tableUnique
+     * @return void
+     * @throws Exception
+     */
+    public function renderTable(string $tableUnique): void
+    {
+        if (!isset($this->tables[$tableUnique])) {
+            throw new Exception("Table with unique name $tableUnique does not exist");
+        }
+
+        $table = $this->tables[$tableUnique];
+        $pdf = $this->pdf;
+
+        // Pre-calculate constants
+        $startY = $pdf->GetY();
+        $startX = $pdf->GetX();
+        $cellWidth = $table->maxWidth / $table->cellsPerRow;
+        $pageHeight = $pdf->getPageHeight() - 20;
+
+        // Prepare styling parameters
+        $defaultStyle = [
+            'font' => $pdf->getFontFamily(),
+            'size' => $pdf->getFontSize(),
+            'color' => $pdf->getTextColor()
+        ];
+
+        foreach ($this->tableRows[$tableUnique] as $rowId => $row) {
+            $maxRowHeight = 0;
+            $currentX = $startX;
+            $rowCells = $this->tableRowCells[$tableUnique][$rowId];
+
+            // First pass - calculate row height
+            foreach ($rowCells as $cell) {
+                $cellHeight = $pdf->getStringHeight($cellWidth, $cell->content);
+                $maxRowHeight = max($maxRowHeight, $cellHeight);
+            }
+
+            // Second pass - render cells
+            foreach ($rowCells as $cellId => $cell) {
+                $config = $this->tableRowCellConfigs[$tableUnique][$rowId][$cellId] ?? null;
+
+                // Apply styling if needed
+                if ($config) {
+                    $this->applyCellStyle($pdf, $config);
+                }
+
+                $pdf->MultiCell(
+                    $cellWidth,
+                    $maxRowHeight,
+                    $cell->content,
+                    1,
+                    'L',
+                    false,
+                    0
+                );
+
+                // Restore default style if needed
+                if ($config) {
+                    $this->restoreStyle($pdf, $defaultStyle);
+                }
+
+                $currentX += $cellWidth;
+            }
+
+            $newY = $pdf->GetY() + $maxRowHeight;
+
+            // Check page break
+            if ($newY > $pageHeight) {
+                $pdf->AddPage();
+                $pdf->SetXY($startX, 20);
+            } else {
+                $pdf->SetXY($startX, $newY);
+            }
+        }
+    }
+
+    private function indexCell(string $tableUnique, string $rowId, string $cellId): void
+    {
+        $this->cellIndexMap[$tableUnique][$rowId][$cellId] = true;
+    }
+
+    private function isCellIndexed(string $tableUnique, string $rowId, string $cellId): bool
+    {
+        return isset($this->cellIndexMap[$tableUnique][$rowId][$cellId]);
+    }
+
+    private function applyCellStyle(TCPDF $pdf, ColumnConfig $config): void
+    {
+        static $lastStyle = null;
+
+        if ($lastStyle !== $config) {
+            // Apply the configuration based on ColumnConfig properties
+            // Implementation depends on what properties ColumnConfig has
+            $lastStyle = $config;
+        }
+    }
+
+    private function restoreStyle(TCPDF $pdf, array $style): void
+    {
+        $pdf->SetFont($style['font'], '', $style['size']);
+        // Restore other styles as needed
+    }
+
+    public function clearTableCache(string $tableUnique): void
+    {
+        unset(
+            $this->tableRowCells[$tableUnique],
+            $this->tableRowCellConfigs[$tableUnique],
+            $this->tableRowsCellCount[$tableUnique],
+            $this->cellIndexMap[$tableUnique],
+            $this->configCache[$tableUnique]
+        );
+        gc_collect_cycles();
+    }
+
+    public function renderLargeTable(string $tableUnique, int $batchSize = 100): void
+    {
+        if (!isset($this->tables[$tableUnique])) {
+            throw new Exception("Table with unique name $tableUnique does not exist");
+        }
+
+        $rowIds = array_keys($this->tableRows[$tableUnique]);
+        $batches = array_chunk($rowIds, $batchSize, true);
+
+        foreach ($batches as $batchRows) {
+            // Render table piece by piece?
+            $this->clearTableCache($tableUnique);
+        }
+    }
+
+public function usingTable(string $tableUnique): self
     {
         if (!array_key_exists($tableUnique, $this->tables))
             throw new Exception("Table with unique name $tableUnique does not exist");
@@ -262,13 +508,14 @@ class PDFDataTables
         return $this;
     }
 
-    public function inColumn(int $columnIndex): self
+    /**
+     * @param int $cellIndex
+     * @return $this
+     * @throws Exception
+     */
+    public function inCell(int $cellIndex): self
     {
-        if (is_null($this->currentTableName))
-            throw new Exception("No table has been selected");
-        if (!isset($this->currentTableName->columns[$columnIndex]))
-            throw new Exception("Column $columnIndex does not exist");
-        $this->currentCellId =& $this->currentTableName->columns[$columnIndex];
+        $row = $this->getCurrentRow();
         return $this;
     }
 
@@ -298,15 +545,6 @@ class PDFDataTables
     {
         if (!array_key_exists($tableUnique, $this->tables))
             throw new Exception("Table with unique name $tableUnique does not exist");
-    }
-
-    /**
-     * @param string $tableUnique
-     * @return void
-     */
-    public function renderTable(string $tableUnique): void
-    {
-        // TODO: Render logic
     }
 
     /**
