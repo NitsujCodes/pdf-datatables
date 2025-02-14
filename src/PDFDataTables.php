@@ -75,6 +75,11 @@ class PDFDataTables
         $this->pdf = &$pdf;
     }
 
+    public function getPDF(): TCPDF
+    {
+        return $this->pdf;
+    }
+
     public function initTCPDF(
         $orientation = 'P',
         $unit = 'mm',
