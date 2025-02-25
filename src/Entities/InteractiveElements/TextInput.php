@@ -2,11 +2,10 @@
 
 namespace NitsujCodes\PDFDataTable\Entities\InteractiveElements;
 
-use NitsujCodes\PDFDataTable\Interfaces\IInteractiveElement;
-use NitsujCodes\PDFDataTable\PDFDataTables;
+use NitsujCodes\PDFDataTable\Contracts\InteractiveElementInterface;
 use TCPDF;
 
-class TextInput implements IInteractiveElement
+class TextInput implements InteractiveElementInterface
 {
     public function __construct(
         private string $value = '',

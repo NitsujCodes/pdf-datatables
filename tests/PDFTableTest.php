@@ -3,7 +3,6 @@
 namespace NitsujCodes\PDFDataTable\Tests;
 
 use PHPUnit\Framework\TestCase;
-use NitsujCodes\PDFDataTable\PDFDataTables;
 
 class PDFTableTest extends TestCase
 {

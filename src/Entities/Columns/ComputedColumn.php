@@ -2,16 +2,16 @@
 
 namespace NitsujCodes\PDFDataTable\Entities\Columns;
 
-use NitsujCodes\PDFDataTable\Interfaces\IColumnDefinition;
+use NitsujCodes\PDFDataTable\Contracts\ColumnDefinitionInterface;
 
-class ComputedColumn extends SimpleColumn implements IColumnDefinition
+class ComputedColumn extends SimpleColumn implements ColumnDefinitionInterface
 {
     public function __construct(
         string $label,
         private readonly \Closure $value,
         private readonly bool $hasHtmlContent = false,
     ) {
-        parent::__construct($label, '');
+        parent::__construct($label, '', []);
     }
 
     public function getValue(array $row): string

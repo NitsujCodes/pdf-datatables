@@ -13,6 +13,7 @@
         }
     },
     "require-dev": {
+        "illuminate/support": "^10.48",
         "phpunit/phpunit": "^10.0"
     },
     "autoload-dev": {

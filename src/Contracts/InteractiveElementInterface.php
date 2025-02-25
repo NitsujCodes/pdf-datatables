@@ -1,10 +1,10 @@
 <?php
 
-namespace NitsujCodes\PDFDataTable\Interfaces;
+namespace NitsujCodes\PDFDataTable\Contracts;
 
 use TCPDF;
 
-interface IInteractiveElement
+interface InteractiveElementInterface
 {
     /**
      * Render the element onto the current PDF

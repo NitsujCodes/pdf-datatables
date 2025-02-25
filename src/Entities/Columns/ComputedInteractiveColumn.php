@@ -2,16 +2,15 @@
 
 namespace NitsujCodes\PDFDataTable\Entities\Columns;
 
-use NitsujCodes\PDFDataTable\Entities\Columns\InteractiveColumn;
-use NitsujCodes\PDFDataTable\Interfaces\IInteractiveColumn;
-use NitsujCodes\PDFDataTable\Interfaces\IInteractiveElement;
+use NitsujCodes\PDFDataTable\Contracts\InteractiveColumnInterface;
+use NitsujCodes\PDFDataTable\Contracts\InteractiveElementInterface;
 
-class ComputedInteractiveColumn extends InteractiveColumn implements IInteractiveColumn
+class ComputedInteractiveColumn extends InteractiveColumn implements InteractiveColumnInterface
 {
     public function __construct(
-        string $label,
-        private readonly \Closure $value,
-        IInteractiveElement $element,
+        string                      $label,
+        private readonly \Closure   $value,
+        InteractiveElementInterface $element,
     ) {
         parent::__construct($label, '', $element);
     }

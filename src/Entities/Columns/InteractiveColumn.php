@@ -2,18 +2,17 @@
 
 namespace NitsujCodes\PDFDataTable\Entities\Columns;
 
-use Exception;
-use NitsujCodes\PDFDataTable\Interfaces\IInteractiveColumn;
-use NitsujCodes\PDFDataTable\Interfaces\IInteractiveElement;
+use NitsujCodes\PDFDataTable\Contracts\InteractiveColumnInterface;
+use NitsujCodes\PDFDataTable\Contracts\InteractiveElementInterface;
 
-class InteractiveColumn extends SimpleColumn implements IInteractiveColumn
+class InteractiveColumn extends SimpleColumn implements InteractiveColumnInterface
 {
     public function __construct(
-        string $label,
-        string $field,
-        private readonly IInteractiveElement $element,
+        string                                       $label,
+        string                                       $field,
+        private readonly InteractiveElementInterface $element,
     ) {
-        parent::__construct($label, $field);
+        parent::__construct($label, $field, []);
     }
 
     public function hasHtmlContent(): bool
@@ -21,7 +20,7 @@ class InteractiveColumn extends SimpleColumn implements IInteractiveColumn
         return false;
     }
 
-    public function getInteractiveElement(): IInteractiveElement
+    public function getInteractiveElement(): InteractiveElementInterface
     {
         return $this->element;
     }

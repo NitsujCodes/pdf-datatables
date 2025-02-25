@@ -1,8 +1,8 @@
 <?php
 
-namespace NitsujCodes\PDFDataTable\Interfaces;
+namespace NitsujCodes\PDFDataTable\Contracts;
 
-interface IColumnDefinition
+interface ColumnDefinitionInterface
 {
     /**
      * Get value from current row
@@ -16,6 +16,18 @@ interface IColumnDefinition
      * @return string
      */
     public function getLabel() : string;
+
+    /**
+     * Get Header Style Options
+     * @return array
+     */
+    public function getHeaderStyleOptions() : array;
+
+    /**
+     * Get Body Style Options
+     * @return array
+     */
+    public function getBodyStyleOptions() : array;
 
     /**
      * TRUE if the column is expected to contain HTML content, FALSE if not

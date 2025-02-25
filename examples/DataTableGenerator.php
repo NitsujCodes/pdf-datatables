@@ -5,28 +5,14 @@ ini_set('max_execution_time', 300);
 
 require __DIR__ . '/../vendor/autoload.php';
 
-use NitsujCodes\PDFDataTable\DTO\ColumnConfig;
-use NitsujCodes\PDFDataTable\DTO\RowConfig;
-use NitsujCodes\PDFDataTable\DTO\TableConfig;
-use NitsujCodes\PDFDataTable\PDFDataTables;
+use NitsujCodes\PDFDataTable\PDFDataTable;
 
 // Initialize the table generator
 $pdf = new TCPDF();
-$pdfDataTables = PDFDataTables::getInstance();
+$pdfDataTables = PDFDataTable::getInstance();
 $pdfDataTables->attachTPCDF($pdf);
-die();
 
-$pdfDataTables->tableService->setRowHeader('testTable', [
-    'name' => [
-        'content' => 'Name',
-    ],
-    'age' => [
-        'content' => 'Age',
-    ],
-    'email' => [
-        'content' => 'Email',
-    ],
-]);
+
 
 $processedRows = [];
 $rows = [

@@ -2,15 +2,17 @@
 
 namespace NitsujCodes\PDFDataTable\Entities\Columns;
 
+use NitsujCodes\PDFDataTable\Contracts\ColumnDefinitionInterface;
 use NitsujCodes\PDFDataTable\Exceptions\ColumnFieldNotFoundException;
-use NitsujCodes\PDFDataTable\Interfaces\IColumnDefinition;
 
-class SimpleColumn implements IColumnDefinition
+class SimpleColumn implements ColumnDefinitionInterface
 {
     public function __construct(
         private readonly string $label,
         private readonly string $field,
-        private readonly bool $hasHtmlContent = false,
+        private readonly array  $headerStyleOptions = [],
+        private readonly array  $bodyStyleOptions = [],
+        private readonly bool   $hasHtmlContent = false,
     ) {}
 
     /**
@@ -33,5 +35,15 @@ class SimpleColumn implements IColumnDefinition
     public function hasHtmlContent(): bool
     {
         return $this->hasHtmlContent;
+    }
+
+    public function getHeaderStyleOptions(): array
+    {
+        return $this->headerStyleOptions;
+    }
+
+    public function getBodyStyleOptions(): array
+    {
+        return $this->bodyStyleOptions;
     }
 }
